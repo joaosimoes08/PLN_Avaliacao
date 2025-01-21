@@ -1,43 +1,46 @@
 from huggingface_hub import login
-from dotenv import load_dotenv, dotenv_values 
-load_dotenv() 
-
-login(token=TOKEN)
-
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, GenerationConfig, pipeline
+from dotenv import load_dotenv
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 import os
 import torch
 
-# Model setup
-model_name = "meta-llama/Meta-Llama-3.1-8B-Instruct"
+# Load the token from the .env file
+load_dotenv()
+token = os.getenv("TOKEN")
+if not token:
+    raise ValueError("The token was not found in the .env file!")
+login(token=token)
 
-# Load the model and tokenizer
+# Model configuration
+model_name = "gpt2"
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
-    device_map="auto",  # Automatically assigns to MPS/CPU
-    torch_dtype=torch.float32  # Use full precision for MPS compatibility
+    device_map="auto",  # Automatically chooses GPU/CPU
+    torch_dtype=torch.float16  # Use half-precision if available
 )
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-# Set up the pipeline
+# Configure the pipeline
 pipe = pipeline(
     "text-generation",
     model=model,
     tokenizer=tokenizer,
-    max_new_tokens=256,
-    num_beams=4,
-    early_stopping=True,
-    repetition_penalty=1.4,
+    max_new_tokens=64,  # Limit token generation
+    temperature=0.7,    # Add randomness
+    top_p=0.9,          # Focus on likely tokens
+    repetition_penalty=2.0  # Penalize repetition
 )
 
-# Define the prompt
-prompt = """User: What is your favourite country?
-Assistant: Well, I am quite fascinated with Peru.
-User: What can you tell me about Peru?
-Assistant:"""
-
-# Generate response
-outputs = pipe(prompt)
-print(outputs[0]["generated_text"])
-
-#Teste commit
+# Conversation loop
+print("Welcome! Type your prompt or 'exit' to quit.")
+while True:
+    user_prompt = input("\nEnter your prompt: ")
+    if user_prompt.lower() == "exit":
+        print("Exiting the program. Goodbye!")
+        break
+    
+    full_prompt = f"User: {user_prompt}\nAssistant:"
+    print("\nGenerating response...")
+    outputs = pipe(full_prompt)
+    print("Response generated:")
+    print(outputs[0]["generated_text"])
