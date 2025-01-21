@@ -1,24 +1,27 @@
 from huggingface_hub import login
 from dotenv import load_dotenv, dotenv_values 
 load_dotenv() 
+import os
+
+TOKEN = os.getenv("TOKEN")
 
 login(token=TOKEN)
 
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, GenerationConfig, pipeline
-import os
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 import torch
 
 print("Codigo Simoes")
 
 # Model setup
-model_name = "meta-llama/Meta-Llama-3.1-8B-Instruct"
+model_name = "EleutherAI/gpt-j-6B"
 
-# Load the model and tokenizer
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
-    device_map="auto",  # Automatically assigns to MPS/CPU
-    torch_dtype=torch.float32  # Use full precision for MPS compatibility
+    device_map="mps",  # Use Metal Performance Shaders backend
+    torch_dtype=torch.float16  # Use half-precision for reduced memory usage
 )
+
+# Load the tokenizer
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 # Set up the pipeline
@@ -26,11 +29,13 @@ pipe = pipeline(
     "text-generation",
     model=model,
     tokenizer=tokenizer,
-    max_new_tokens=256,
-    num_beams=4,
+    device=0,  # Required for MPS backend
+    max_new_tokens=64,  # Generate fewer tokens
+    num_beams=1,        # Use greedy decoding for faster results
     early_stopping=True,
-    repetition_penalty=1.4,
+    repetition_penalty=1.2,  # Slight penalty
 )
+
 
 # Define the prompt
 prompt = """User: What is your favourite country?
