@@ -8,6 +8,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 import os
 import torch
 
+print("Codigo Simoes")
+
 # Model setup
 model_name = "meta-llama/Meta-Llama-3.1-8B-Instruct"
 
